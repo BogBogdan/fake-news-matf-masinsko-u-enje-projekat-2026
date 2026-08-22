@@ -11,3 +11,5 @@ datasets
 jupyter
 ipykernel
 kaggle
+accelerate
+ipywidgets
