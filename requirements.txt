@@ -10,4 +10,5 @@ datasets
 jupyter
 ipykernel
 kaggle
-scikit-learn
+accelerate
+ipywidgets
