@@ -1,15 +1,24 @@
+# osnovno
 numpy
 pandas
-scipy
 scikit-learn
 matplotlib
-seaborn
 nltk
+
+# preuzimanje skupa u data_prep.ipynb
+kaggle
+
+# neuronske mreze u program.ipynb
+tensorflow
+
+# transformeri: program.ipynb ucitava model, colab_transformeri.ipynb ga dotrenira
 torch
 transformers
+accelerate
 datasets
+sentence-transformers
+
+# pokretanje notebook-a
 jupyter
 ipykernel
-kaggle
-accelerate
 ipywidgets
