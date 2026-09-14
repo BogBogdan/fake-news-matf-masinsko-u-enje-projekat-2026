@@ -32,7 +32,8 @@ Treći notebook radi na Google Colab-u ili bilo kojoj mašini sa GPU-om. Ako
 `data/news_colab.parquet` postoji, čita ga direktno; ako ne, ponudi upload.
 
 Na procesoru sa četiri jezgra ceo `program.ipynb` traje oko 75 minuta, najviše
-zbog BiLSTM-a. Dotreniranje DistilBERT-a na T4 kartici traje 6 minuta, a na
+zbog BiLSTM-a, plus još oko 15 minuta za pretragu hiperparametara u sekciji 14.
+Ta sekcija zavisi samo od učitanog `df`, pa može da se pokrene i sama. Dotreniranje DistilBERT-a na T4 kartici traje 6 minuta, a na
 procesoru bi trajalo 47 sati, pa smo ga zato izdvojili u zaseban notebook.
 
 ## Priprema podataka
@@ -106,6 +107,61 @@ Logisticka regresija   C = 10   cv 0.9758   test 0.9801
 Nije mnogo promenilo. Za SVM je podrazumevano `C = 1` već bilo najbolje, KNN sa
 `k = 21` daje isto kao sa `k = 5`, a jedino se logistička regresija popravila,
 sa 0.9756 na 0.9801.
+
+### Šira pretraga hiperparametara
+
+Posle predaje smo, na predlog asistenta, dodali širu pretragu na jednom
+jednostavnom modelu, logističkoj regresiji nad TF-IDF vektorima (sekcija 14 u
+`program.ipynb`). Ovde nema unakrsne validacije, skup je odmah na početku
+podeljen na trening (60 %, 23 108 članaka), validacioni (20 %, 7 703) i test
+(20 %, 7 703), stratifikovano. Sve kombinacije se biraju po validacionom skupu,
+a test se koristi jednom, na kraju.
+
+Pretraga ide u dva koraka. Prvo se traže parametri vektorizatora sa
+podrazumevanom logističkom regresijom, 32 kombinacije:
+
+```
+max_features   1000, 5000, 20000, 50000
+ngram_range    (1, 1), (1, 2)
+min_df         1, 5
+sublinear_tf   False, True
+```
+
+Zatim se na najboljem vektorizatoru traže parametri klasifikatora, 28
+kombinacija:
+
+```
+C             0.001, 0.01, 0.1, 1, 10, 100, 1000
+penalty       l1, l2
+class_weight  None, balanced
+```
+
+Najbolje po validaciji:
+
+```
+TF-IDF   max_features 5000, ngram (1, 2), min_df 1, sublinear_tf True   validacija 0.9805
+LogReg   C = 10, l2, class_weight balanced                              validacija 0.9856
+
+trening    0.9979
+validacija 0.9856
+test       0.9860
+
+podrazumevani model (max_features 5000, C = 1) na istom testu   0.9740
+```
+
+Šta se vidi. Bigrami i `sublinear_tf` pomažu najviše od parametara
+vektorizatora, oko pola poena svaki. Veličina rečnika iznad 5 000 ne pomaže,
+sa 50 000 obeležja validacija je čak malo niža, a trening viša. `min_df` ne
+menja ništa jer `max_features` ionako zadrži samo česte reči. Kod
+klasifikatora najviše znači `C`: sa 0.001 model ne nauči ništa (0.55, kao
+Dummy), do 10 raste, a od 100 naviše je tačnost na treningu 1.0000 dok
+validacija polako pada, što je čist primer preprilagođavanja. `l2` je stalno
+malo bolji od `l1`, a `class_weight` menja tek treću decimalu.
+
+Ukupno je pretraga donela 1.2 poena u odnosu na podrazumevani model, sa 0.9740
+na 0.9860, i validacija se poklapa sa testom do pola desetinke, pa izbor po
+validaciji nije ulepšao rezultat. Grafici sa krivama po `C` i po veličini
+rečnika su u notebook-u.
 
 ### Preprilagođavanje
 
@@ -197,7 +253,7 @@ ostalima.
 
 ```
 data_prep.ipynb             priprema podataka
-program.ipynb               klasicni modeli, mreze, evaluacija
+program.ipynb               klasicni modeli, mreze, evaluacija, pretraga hiperparametara
 colab_transformeri.ipynb    DistilBERT i embedinzi
 rezultati_colab.json        rezultati sa GPU masine
 requirements.txt            zavisnosti
